@@ -1,0 +1,35 @@
+<div class="container">
+  <div class="header">
+    <p>Chat UI</p>
+  </div>
+  <div class="content">
+      <div class="chat-box">
+          <div class="users">
+            <h3>User</h3>
+            <div class="buttons">
+              <select name="users" id="users" [(ngModel)]="currentUser" (change)="onCurrentUserChange()">
+                <option *ngFor="let user of users" [ngValue]="user">{{user.user_name}}</option>
+              </select>
+              <select name="port" id="ports" [(ngModel)]="port" (change)="setWebSocket()">
+                <option [ngValue]="6788">6788</option>
+                <option [ngValue]="6789">6789</option>
+              </select>
+              <button (click)="getMessages()">Refresh</button>
+            </div>
+          </div>
+          <div class="chat-view">
+            <div class="messages">
+              <p *ngFor="let message of messages" [ngStyle]="{'text-align': getUsername(message.sent_from) === currentUser.user_name ? 'right' : 'left'}">
+                <span>{{message.message}}</span>
+              </p>
+            </div>
+          </div>
+          <div class="input-view">
+              <input type="text" placeholder="Type message here..." [(ngModel)]="message">
+              <button (click)="sendMessage()">Send</button>
+          </div>
+      </div>
+      <div class="notifications"></div>
+  </div>
+</div>
+<router-outlet></router-outlet>

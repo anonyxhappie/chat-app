@@ -1,0 +1,28 @@
+.container {
+  width: 40%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+
+  .chat-box {
+    .chat-view {
+      height: 20rem;
+      overflow-y: scroll;
+      display: flex;
+      flex-direction: column-reverse;
+      .messages {
+        display: flex;
+        flex-direction: column;
+        padding: 1rem;
+
+        p {
+          span {
+            background-color: #adf;
+            padding: .5rem;
+            border-radius: 15px;
+          }
+        }
+      }
+    }
+  }
+}
