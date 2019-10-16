@@ -45,6 +45,8 @@ INSTALLED_APPS = [
     'logpipe',
     'rest_framework',
     'chat_api',
+    'channels',
+    'chat_channels',
 ]
 
 MIDDLEWARE = [
@@ -77,7 +79,7 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'chatServer.wsgi.application'
-
+ASGI_APPLICATION = 'chatServer.routing.application'
 
 # Database
 # https://docs.djangoproject.com/en/2.2/ref/settings/#databases

@@ -16,6 +16,7 @@ logging.basicConfig()
 STATE = {'value': 0}
 
 USERS = set()
+WSUSERS = set()
 
 
 def state_event():
@@ -24,6 +25,10 @@ def state_event():
 
 def users_event():
   return json.dumps({'type': 'users', 'count': len(USERS)})
+
+
+def wsusers_event():
+  return json.dumps({'type': 'users', 'count': len(WSUSERS)})
 
 
 async def notify_state():
@@ -36,17 +41,41 @@ async def notify_users():
       message = users_event()
       await asyncio.wait([user.send(message) for user in USERS])
 
+async def notify_wsusers():
+    if WSUSERS:  # asyncio.wait doesn't accept an empty list
+      message = wsusers_event()
+      await asyncio.wait([user.send(message) for user in dict(WSUSERS).values()])
+      print(';notified ws users')
+
 async def notify_msg_to_users():
     if USERS:  # asyncio.wait doesn't accept an empty list
       # filter users from ids
-      print('kfk consumer', kfk_consumer)
+      # print('kfk consumer', kfk_consumer)
+      # messages = kfk_consumer.poll(max_records=10)
+      # print(messages)
+      print(WSUSERS)
       for msg in kfk_consumer:
-          print('send message', msg)
-          print(msg.value)
+        #   print('send message', msg)
+        #   print(msg.value)
           message = json.dumps(msg.value)
           await asyncio.wait([user.send(message) for user in USERS])
           print('notified to all')
       print('out of kfk consumer')
+
+async def notify_msg_to_wsusers():
+    if WSUSERS:  # asyncio.wait doesn't accept an empty list
+      # filter users from ids
+      # print('kfk consumer', kfk_consumer)
+      # messages = kfk_consumer.poll(max_records=10)
+      # print(messages)
+      print('---', WSUSERS)
+      for msg in kfk_consumer:
+          print('send message', msg)
+        #   print(msg.value)
+          message = json.dumps(msg.value)
+          await asyncio.wait([user.send(message) for user in dict(WSUSERS).values()])
+          print('notified to ws users')
+      print('out of kfk wsconsumer')
 
 
 async def register(websocket):
@@ -55,6 +84,11 @@ async def register(websocket):
     USERS.add(websocket)
     await notify_users()
 
+async def register_user(websocket, user_id):
+    print('Adding websocket to WSUSERS..', user_id)
+    print(websocket)
+    WSUSERS.add((user_id, websocket))
+    await notify_msg_to_wsusers()
 
 async def unregister(websocket):
     USERS.remove(websocket)
@@ -66,22 +100,24 @@ async def counter(websocket, path):
     print('Registering websocket..')
     await register(websocket)
     try:
-        print('await websocket.send(state_event())..')
-        # await websocket.send(state_event())
-        async for message in websocket:
-            data = json.loads(message)
-            print('received event: ', data)
-            if data['action'] == 'minus':
-                STATE['value'] -= 1
-                await notify_state()
-            elif data['action'] == 'plus':
-                STATE['value'] += 1
-                await notify_state()
-            elif data['action'] == 'message':
-                await notify_msg_to_users()
-            else:
-                print('unsupported event: ', data)
-                logging.error('unsupported event: {}', data)
+      print('await websocket.send(state_event())..')
+      # await websocket.send(state_event())
+      async for message in websocket:
+          data = json.loads(message)
+          print('received event: ', data)
+          if data['action'] == 'minus':
+              STATE['value'] -= 1
+              await notify_state()
+          elif data['action'] == 'plus':
+              STATE['value'] += 1
+              await notify_state()
+          elif data['action'] == 'register':
+              await register_user(websocket, data['user'])
+          elif data['action'] == 'message':
+              await notify_msg_to_users()
+          else:
+              print('unsupported event: ', data)
+              logging.error('unsupported event: {}', data)
     finally:
         await unregister(websocket)
 
@@ -117,7 +153,7 @@ class Command(BaseCommand):
         # except asyncio.TimeoutError:
         #     print('timeout!')
             
-        start_server = websockets.serve(counter, 'localhost', wsport, close_timeout=1000)
+        start_server = websockets.serve(counter, 'localhost', wsport, close_timeout=10000)
         # start_server = websockets.serve(send_message, 'localhost', 6788)
         # start_server2 = websockets.serve(send_message, 'localhost', 6789)
         print('run_until_complete start_server')

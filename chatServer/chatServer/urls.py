@@ -17,4 +17,5 @@ from django.urls import path, include
 
 urlpatterns = [
     path('', include('chat_api.urls')),
+    path('', include('chat_channels.urls')),
 ]

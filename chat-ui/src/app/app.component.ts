@@ -32,15 +32,12 @@ export class AppComponent {
 
   constructor(private http: HttpClient) {
 
-    this.websocket = new WebSocket('ws://localhost:' + this.port + '/');
-    this.websocket.onopen = () => this.websocket.send({ action: 'plus' });
-    console.log('trt', this.websocket);
-    // this.websocket.send(JSON.stringify({action: 'plus'}));
-    this.onWebsockectsMessageReceived();
     this.getUsers();
+    // this.websocket.send(JSON.stringify({action: 'plus'}));
   }
 
   getMessages() {
+    this.messages = [];
     return this.http.get(
       'http://localhost:8000/text?from=' +
       this.currentUser.user_id +
@@ -57,10 +54,23 @@ export class AppComponent {
       sent_to: this.otherUser.user_id,
       message: this.message
     };
+    console.log(this.websocket.readyState);
+    if (this.websocket.readyState !== 1) {
+      console.log('unable to send message:websocket.readyState:', this.websocket.readyState);
+      console.log('establishing new socket connection');
+      this.websocket = new WebSocket('ws://localhost:' + this.port + '/');
+      this.websocket.send(JSON.stringify({ action: 'register', user: this.currentUser.user_id }));
+      console.log('socket connection registered');
+      // return;
+    }
+
+    // this.websocket.send(JSON.stringify({ action: 'register', user: this.currentUser.user_id }));
     this.websocket.send(JSON.stringify({ action: 'message' }));
+
     return this.http.post('http://localhost:8000/text', body).subscribe((response: any) => {
       // console.log(response);
       this.message = '';
+      console.log('message sent');
     });
   }
 
@@ -70,6 +80,16 @@ export class AppComponent {
       this.currentUser = this.users[0];
       this.otherUser = this.users[1];
       this.getMessages();
+      console.log('establishing socket connection');
+      this.websocket = new WebSocket('ws://localhost:' + this.port + '/');
+      this.websocket.send(JSON.stringify({ action: 'register', user: this.currentUser.user_id }));
+      console.log('socket connection registered');
+      // if (this.websocket.readyState === WebSocket.OPEN) {
+      //   this.websocket.send(JSON.stringify({ action: 'register', user: this.currentUser.user_id }));
+      //   console.log({ action: 'register', user: this.currentUser.user_id }, this.websocket);
+      // }
+
+      this.onWebsockectsMessageReceived();
     });
   }
 
@@ -95,29 +115,17 @@ export class AppComponent {
   }
 
   onWebsockectsMessageReceived() {
-    this.websocket.onopen = (event) => {
-      console.log('On websocket open');
-      console.log('::', event);
-    };
-    this.websocket.onmessage = (event) => {
+    // if (this.websocket.readyState === WebSocket.OPEN) {
+    this.websocket.addEventListener('message', (event) => {
+      console.log('Message from server ', event.data);
       const data = JSON.parse(event.data);
-      console.log('On websocket message');
-      console.log('::', event);
-      // console.log('onWebsockectsMessageReceived::', data);
-      // console.log(data['type']);
       if (data['type'] === 'users') {
+        console.log(data);
         return;
       }
       this.messages = [...this.messages, data];
-    };
-    this.websocket.onerror = (event) => {
-      console.log('On websocket error');
-      console.log('::', event);
-    };
-    this.websocket.onclose = (event) => {
-      console.log('On websocket close');
-      console.log('::', event);
-    };
+    });
+    // }
   }
 
 }
